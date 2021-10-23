@@ -1,7 +1,8 @@
-// ignore_for_file: prefer_const_constructors, avoid_init_to_null
+// ignore_for_file: prefer_const_constructors, avoid_init_to_null, prefer_is_empty
 
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:elephant_api/components/loader_component.dart';
 import 'package:elephant_api/helpers/constans.dart';
 import 'package:elephant_api/models/elephant.dart';
@@ -18,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Elephant> _elephants = [];
   bool _showLoader = false;
+  bool _isFiltered = false;
+  String _search = '';
   
   @override
   void initState() {
@@ -33,29 +36,32 @@ class _HomeScreenState extends State<HomeScreen> {
           'Elephants',
           style: TextStyle( fontSize: 22)
         ),
+        actions: <Widget>[
+          _isFiltered
+          ? IconButton(
+              onPressed: _removeFilter, 
+              icon: Icon(Icons.filter_none)
+            )
+          : IconButton(
+              onPressed: _showFilter, 
+              icon: Icon(Icons.filter_alt)
+            )
+        ],
       ),
-      body: _showLoader ? LoaderComponent(text: 'Espere un momento...',) : _getDody(),
+      body: _showLoader ? LoaderComponent(text: 'Espere un momento...',) : _getContent(),
     );
   }
 
-  Widget _getDody() {
-    return Container(
-      child: (
-        Center(
-            child: Text(
-              'Bienvenid@',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800
-              ),
-            ),
-          )
-      ),
-    );
+  Widget _getContent() {
+    return _elephants.length == 0
+      ? _noContent()
+      : _getListView();
   }
 
-  void _getElephants() async{
+  Future<Null> _getElephants() async{
 
+    _elephants = [];
+    
     setState(() {
       _showLoader = true;
     });
@@ -78,16 +84,14 @@ class _HomeScreenState extends State<HomeScreen> {
     var decodedJson = jsonDecode(body);
     if (decodedJson != null)
     {
-      // var contain = null;
-      var myListFiltered = null;
       for (var item in decodedJson) {
+      //some records come empty, size is validated
         if (item.length == 12) {
           _elephants.add(Elephant.fromJson(item));
         }
       }
     }
 
-    print(_elephants); 
 
 
     // if(response.statusCode >= 400)
@@ -101,4 +105,168 @@ class _HomeScreenState extends State<HomeScreen> {
     // }
   }
 
+  Widget _noContent() {
+    return Center(
+      child: Text(
+        _isFiltered
+          ? 'No hay elefantes con ese criterio de búsqueda.'
+          : 'No hay elefantes para listar.',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w800
+        ),
+      ),
+    );
+  }
+
+  Widget _getListView() {
+    // return RefreshIndicator(
+    //   onRefresh: _getElephants,
+    //   child: ListView(
+    //     children: _elephants.map((e) {
+    //       return InkWell(
+    //         onTap: () {},
+    //         child: Container(
+    //           margin: EdgeInsets.all(10),
+    //           child: Text(
+    //             e.name, 
+    //             style: TextStyle(
+    //               fontSize: 20
+    //             ),
+    //           ),
+    //         ),
+    //       );
+    //     }).toList(),
+    //   ),
+    // );
+    return RefreshIndicator(
+      onRefresh: _getElephants,
+      child: ListView(
+        children: _elephants.map((e) {
+          return Card(
+            child: InkWell(
+              onTap: () {},
+              //onTap: () => _goInfoUser(e),
+              child: Container(
+                margin: EdgeInsets.all(10),
+                padding: EdgeInsets.all(5),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(40),
+                      child: CachedNetworkImage(
+                        imageUrl: e.image,
+                        errorWidget: (context, url, error) => Icon(Icons.error),
+                        fit: BoxFit.cover,
+                        height: 80,
+                        width: 80,
+                        placeholder: (context, url) => Image(
+                          image: AssetImage('assets/noimage.png'),
+                          fit: BoxFit.cover,
+                          height: 80,
+                          width: 80,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        margin: EdgeInsets.symmetric(horizontal: 10),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Column(
+                              children: [
+                                Text(
+                                  e.name, 
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+
+  void _showFilter() {
+    showDialog(
+      context: context, 
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          title: Text('Filtrar elefantes'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text('Escriba las primeras letras del nombre del elefante'),
+              SizedBox(height: 10,),
+              TextField(
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Nombre...',
+                  labelText: 'Buscar',
+                  suffixIcon: Icon(Icons.search)
+                ),
+                onChanged: (value) {
+                  _search = value;
+                },
+              )
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(), 
+              child: Text('Cancelar')
+            ),
+            TextButton(
+              onPressed: () => _filter(), 
+              child: Text('Filtrar')
+            ),
+          ],
+        );
+      });
+  }
+
+  void _removeFilter() {
+    setState(() {
+      _isFiltered = false;
+      _search = '';
+    });
+    _getElephants();
+  }
+
+  void _filter() {
+    if (_search.isEmpty) {
+      return;
+    }
+
+    List<Elephant> filteredList = [];
+    for (var elephante in _elephants) {
+      if (elephante.name.toLowerCase().contains(_search.toLowerCase())) {
+        filteredList.add(elephante);
+      }
+    }
+
+    setState(() {
+      _elephants = filteredList;
+      _isFiltered = true;
+    });
+
+    Navigator.of(context).pop();
+  }
 }
