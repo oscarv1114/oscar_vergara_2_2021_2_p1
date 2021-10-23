@@ -2,10 +2,13 @@
 
 import 'dart:convert';
 
+import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:connectivity/connectivity.dart';
 import 'package:elephant_api/components/loader_component.dart';
 import 'package:elephant_api/helpers/constans.dart';
 import 'package:elephant_api/models/elephant.dart';
+import 'package:elephant_api/screens/elephant_info_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -40,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _isFiltered
           ? IconButton(
               onPressed: _removeFilter, 
-              icon: Icon(Icons.filter_none)
+              icon: Icon(Icons.clear)
             )
           : IconButton(
               onPressed: _showFilter, 
@@ -59,15 +62,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<Null> _getElephants() async{
-
     _elephants = [];
-    
+
     setState(() {
       _showLoader = true;
     });
 
+    var connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      setState(() {
+        _showLoader = false;
+      });
+      await showAlertDialog(
+        context: context,
+        title: 'Error', 
+        message: 'No dispone de conexión a internet.',
+        actions: <AlertDialogAction>[
+            AlertDialogAction(key: null, label: 'Aceptar'),
+        ]
+      );    
+      return;
+    }
 
-    var url = Uri.parse('${Constans.apiUrl}elephants');
+
+    var url = Uri.parse('${Constans.apiUrl}/elephants');
     var response = await http.get(
       url,
       headers: {
@@ -92,17 +110,19 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
+    if(response.statusCode >= 400)
+    {
+      await showAlertDialog(
+        context: context,
+        title: 'Error', 
+        message: 'No se pudo cargar el listado de elefantes',
+        actions: <AlertDialogAction>[
+            AlertDialogAction(key: null, label: 'Aceptar'),
+        ]
+      ); 
+      return;
+    }
 
-
-    // if(response.statusCode >= 400)
-    // {
-    //   setState(() {
-    //     //_passwordShowError = true;
-    //     //_passwordError = 'email y/o contraseña incorrectos...';
-    //     print('No se pudo cargar el listado de elefantes');
-    //   });
-    //   return;
-    // }
   }
 
   Widget _noContent() {
@@ -145,8 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: _elephants.map((e) {
           return Card(
             child: InkWell(
-              onTap: () {},
-              //onTap: () => _goInfoUser(e),
+              onTap: () => _goInfoElephante(e),
               child: Container(
                 margin: EdgeInsets.all(10),
                 padding: EdgeInsets.all(5),
@@ -189,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios),
+                    Icon(Icons.arrow_right_outlined, size: 45, color: Colors.orange[300],),
                   ],
                 ),
               ),
@@ -268,5 +287,19 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     Navigator.of(context).pop();
+  }
+
+  void _goInfoElephante(Elephant elephant) async {
+    String? result = await Navigator.push(
+      context, 
+      MaterialPageRoute(
+        builder: (context) => ElephantInfoScreen(
+          elephant: elephant,
+        )
+      )
+    );
+    if (result == 'yes') {
+      _getElephants();
+    }
   }
 }
