@@ -1,6 +1,6 @@
 // ignore_for_file: prefer_collection_literals, unnecessary_new
 
-class Elephants {
+class Elephant {
   String sId = '';
   int index = 0;
   String name = '';
@@ -14,7 +14,7 @@ class Elephants {
   String image = '';
   String note = '';
 
-  Elephants(
+  Elephant(
     {
       required this.sId,
       required this.index,
@@ -31,7 +31,7 @@ class Elephants {
     }
   );
 
-  Elephants.fromJson(Map<String, dynamic> json) {
+  Elephant.fromJson(Map<String, dynamic> json) {
     sId = json['_id'];
     index = json['index'];
     name = json['name'];
