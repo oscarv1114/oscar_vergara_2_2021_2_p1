@@ -10,7 +10,6 @@ import 'package:elephant_api/components/loader_component.dart';
 import 'package:elephant_api/components/utils.dart';
 import 'package:elephant_api/helpers/constans.dart';
 import 'package:elephant_api/models/elephant.dart';
-import 'package:elephant_api/screens/elephant_info_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -63,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
       : _getListView();
   }
 
-  Future<Null> _getElephants() async{
+  Future<void> _getElephants() async{
     _elephants = [];
 
     setState(() {
@@ -143,7 +142,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _getListView() {
     return RefreshIndicator(
-      backgroundColor: Colors.brown,
       onRefresh: _getElephants,
       child: SafeArea(
         // Wrapper before Scroll view!
@@ -154,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: <Widget>[
                 for (int i = 0; i < _elephants.length; i++)
                   AnimateIfVisible(
-                    key: Key('${_elephants[i].sId}'),
+                    key: Key(_elephants[i].sId),
                     builder: animationBuilder(
                       InkWell(
                         onTap: () => _showInfo(_elephants[i]),
@@ -301,39 +299,21 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).pop();
   }
 
-  void _goInfoElephante(Elephant elephant) async {
-    String? result = await Navigator.push(
-      context, 
-      MaterialPageRoute(
-        builder: (context) => ElephantInfoScreen(
-          elephant: elephant,
-        )
-      )
-    );
-    if (result == 'yes') {
-      _getElephants();
-    }
-  }
-
   Widget buildAnimatedItem(
     BuildContext context,
     int index,
     Animation<double> animation,
   ) =>
-    // For example wrap with fade transition
     FadeTransition(
       opacity: Tween<double>(
         begin: 0,
         end: 1,
       ).animate(animation),
-      // And slide transition
       child: SlideTransition(
         position: Tween<Offset>(
           begin: Offset(0, -0.1),
           end: Offset.zero,
         ).animate(animation),
-        // Paste you Widget
-        //child: YouWidgetHere(),
       ),
   );
 
