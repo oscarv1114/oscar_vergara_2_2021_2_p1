@@ -1,0 +1,39 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_constructors_in_immutables, avoid_unnecessary_containers, use_key_in_widget_constructors, unnecessary_new
+
+import 'package:flutter/material.dart';
+
+class LoaderComponent extends StatelessWidget {
+  final String text;
+
+  LoaderComponent({this.text = ''});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 200,
+        height: 100,
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.5),
+              spreadRadius: 5,
+              blurRadius: 7,
+              offset: Offset(0, 3),
+            )
+          ]
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 15,),
+            Text(text, style: TextStyle(fontSize: 20),),
+          ],
+        ),
+      ),
+    );
+  }
+}
