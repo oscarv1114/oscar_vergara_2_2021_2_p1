@@ -215,12 +215,15 @@ class _ElephantInfoScreenState extends State<ElephantInfoScreen> {
                               )
                             ),
                             GestureDetector(
-                              child: Text(
-                                _elephant.wikilink, 
-                                style: TextStyle(
-                                  decoration: TextDecoration.underline,
-                                   color: Colors.blue
-                                )
+                              child: Container(
+                                width: 300,
+                                child: Text(
+                                  _elephant.wikilink, 
+                                  style: TextStyle(
+                                    decoration: TextDecoration.underline,
+                                     color: Colors.blue
+                                  )
+                                ),
                               ),
                               onTap: () {
                                 setState(() {

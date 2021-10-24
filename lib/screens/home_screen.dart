@@ -3,9 +3,11 @@
 import 'dart:convert';
 
 import 'package:adaptive_dialog/adaptive_dialog.dart';
+import 'package:auto_animated/auto_animated.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:connectivity/connectivity.dart';
 import 'package:elephant_api/components/loader_component.dart';
+import 'package:elephant_api/components/utils.dart';
 import 'package:elephant_api/helpers/constans.dart';
 import 'package:elephant_api/models/elephant.dart';
 import 'package:elephant_api/screens/elephant_info_screen.dart';
@@ -140,87 +142,97 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _getListView() {
-    // return RefreshIndicator(
-    //   onRefresh: _getElephants,
-    //   child: ListView(
-    //     children: _elephants.map((e) {
-    //       return InkWell(
-    //         onTap: () {},
-    //         child: Container(
-    //           margin: EdgeInsets.all(10),
-    //           child: Text(
-    //             e.name, 
-    //             style: TextStyle(
-    //               fontSize: 20
-    //             ),
-    //           ),
-    //         ),
-    //       );
-    //     }).toList(),
-    //   ),
-    // );
     return RefreshIndicator(
+      backgroundColor: Colors.brown,
       onRefresh: _getElephants,
-      child: ListView(
-        children: _elephants.map((e) {
-          return Card(
-            child: InkWell(
-              onTap: () => _goInfoElephante(e),
-              child: Container(
-                margin: EdgeInsets.all(10),
-                padding: EdgeInsets.all(5),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(40),
-                      child: CachedNetworkImage(
-                        imageUrl: e.image,
-                        errorWidget: (context, url, error) => Icon(Icons.error),
-                        fit: BoxFit.cover,
-                        height: 80,
-                        width: 80,
-                        placeholder: (context, url) => Image(
-                          image: AssetImage('assets/noimage.png'),
-                          fit: BoxFit.cover,
-                          height: 80,
-                          width: 80,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        margin: EdgeInsets.symmetric(horizontal: 10),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            Column(
-                              children: [
-                                Text(
-                                  e.name, 
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold
+      child: SafeArea(
+        // Wrapper before Scroll view!
+        child: AnimateIfVisibleWrapper(
+          showItemInterval: Duration(milliseconds: 100),
+          child: SingleChildScrollView(
+            child: Column(
+              children: <Widget>[
+                for (int i = 0; i < _elephants.length; i++)
+                  AnimateIfVisible(
+                    key: Key('${_elephants[i].sId}'),
+                    builder: animationBuilder(
+                      InkWell(
+                        onTap: () => _showInfo(_elephants[i]),
+                        child: Container(
+                          color: Colors.grey[400],
+                          margin: EdgeInsets.all(0),
+                          padding: EdgeInsets.all(10),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(40),
+                                child: CachedNetworkImage(
+                                  imageUrl: _elephants[i].image,
+                                  errorWidget: (context, url, error) => Icon(Icons.error),
+                                  fit: BoxFit.cover,
+                                  height: 80,
+                                  width: 80,
+                                  placeholder: (context, url) => Image(
+                                    image: AssetImage('assets/noimage.png'),
+                                    fit: BoxFit.cover,
+                                    height: 80,
+                                    width: 80,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
+                              ),
+                              Expanded(
+                                child: Container(
+                                  margin: EdgeInsets.symmetric(horizontal: 10),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: [
+                                      Column(
+                                        children: [
+                                          Text(
+                                            _elephants[i].name, 
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.arrow_right_outlined, size: 45, color: Colors.orange[300],),
+                            ],
+                          ),
                         ),
                       ),
+                      xOffset: i.isEven ? 0.15 : -0.15,
+                      padding: EdgeInsets.all(10),
                     ),
-                    Icon(Icons.arrow_right_outlined, size: 45, color: Colors.orange[300],),
-                  ],
-                ),
-              ),
+                  ),
+              ],
             ),
-          );
-        }).toList(),
+          ),
+        ),
       ),
     );
   }
 
+  Future<void> _showFilter() async {
+    
+    var connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      await showAlertDialog(
+        context: context,
+        title: 'Error', 
+        message: 'No dispone de conexión a internet.',
+        actions: <AlertDialogAction>[
+            AlertDialogAction(key: null, label: 'Aceptar'),
+        ]
+      );    
+      return;
+    }
 
-  void _showFilter() {
     showDialog(
       context: context, 
       builder: (context) {
@@ -275,9 +287,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     List<Elephant> filteredList = [];
-    for (var elephante in _elephants) {
-      if (elephante.name.toLowerCase().contains(_search.toLowerCase())) {
-        filteredList.add(elephante);
+    for (var elephant in _elephants) {
+      if (elephant.name.toLowerCase().contains(_search.toLowerCase())) {
+        filteredList.add(elephant);
       }
     }
 
@@ -301,5 +313,247 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result == 'yes') {
       _getElephants();
     }
+  }
+
+  Widget buildAnimatedItem(
+    BuildContext context,
+    int index,
+    Animation<double> animation,
+  ) =>
+    // For example wrap with fade transition
+    FadeTransition(
+      opacity: Tween<double>(
+        begin: 0,
+        end: 1,
+      ).animate(animation),
+      // And slide transition
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: Offset(0, -0.1),
+          end: Offset.zero,
+        ).animate(animation),
+        // Paste you Widget
+        //child: YouWidgetHere(),
+      ),
+  );
+
+  Future<void> _showInfo(Elephant elephant) async {
+
+    var connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      await showAlertDialog(
+        context: context,
+        title: 'Error', 
+        message: 'No dispone de conexión a internet.',
+        actions: <AlertDialogAction>[
+            AlertDialogAction(key: null, label: 'Aceptar'),
+        ]
+      );    
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(elephant.name),
+            ),
+            body: Container(
+              padding: const EdgeInsets.all(1.0),
+              alignment: Alignment.topLeft,
+              child: Hero(
+                tag: 'flippers',
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Container(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(150),
+                              child: FadeInImage(
+                                placeholder: AssetImage('assets/noimage.png'), 
+                                image: NetworkImage(elephant.image),
+                                height: 300,
+                                width: 300,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ],
+                        ),
+                        width: MediaQuery.of(context).size.width,
+                        height: 350,
+                        color: Color(0xFF1640d3)
+                      ),
+                      Container(
+                        width: double.infinity,
+                        color: Color(0xFF7c9bdf),
+                        child: Container(
+                          margin: EdgeInsets.all(10),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Name:', 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF001fce)
+                                )
+                              ),
+                              Text(
+                                elephant.name, 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70
+                                ),
+                              ),
+                              SizedBox(height: 7,),
+                              Text(
+                                'Affiliation:', 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF001fce)
+                                )
+                              ),
+                              Text(
+                                elephant.affiliation, 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70
+                                ),
+                              ),
+                              SizedBox(height: 7,),
+                              Text(
+                                'Species:', 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF001fce)
+                                )
+                              ),
+                              Text(
+                                elephant.species, 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70
+                                ),
+                              ),
+                              SizedBox(height: 7,),
+                              Text(
+                                'Sex:', 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF001fce)
+                                )
+                              ),
+                              Text(
+                                elephant.sex, 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70
+                                ),
+                              ),
+                              SizedBox(height: 7,),
+                              Text(
+                                'Fictional:', 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF001fce)
+                                )
+                              ),
+                              Text(
+                                elephant.fictional, 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70
+                                ),
+                              ),
+                              SizedBox(height: 7,),
+                              Text(
+                                'Date of birth:', 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF001fce)
+                                )
+                              ),
+                              Text(
+                                elephant.dob, 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70
+                                ),
+                              ),
+                              SizedBox(height: 7,),
+                              Text(
+                                'Date of dead:', 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF001fce)
+                                )
+                              ),
+                              Text(
+                                elephant.dod, 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70
+                                ),
+                              ),
+                              SizedBox(height: 7,),
+                              Text(
+                                'link:', 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF001fce)
+                                )
+                              ),
+                              Text(
+                                elephant.wikilink, 
+                                style: TextStyle(
+                                  decoration: TextDecoration.underline,
+                                  fontSize: 16,
+                                  color: Colors.white70
+                                )
+                              ),
+                              SizedBox(height: 7,),
+                              Text(
+                                'Note:', 
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF001fce)
+                                )
+                              ),
+                              Container(
+                                width: 300,
+                                child: Text(
+                                  elephant.note, 
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white70
+                                  )
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
